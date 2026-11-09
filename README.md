@@ -14,8 +14,10 @@ them:    switcheroo pickup 7-crossover-clockwork
 Both people need the CLI:
 
 ```
-go install github.com/kilupskalvis/switcheroo/cmd/switcheroo@latest
+curl -fsSL https://raw.githubusercontent.com/kilupskalvis/switcheroo/main/install.sh | sh
 ```
+
+This installs to `~/.local/bin`; set `SWITCHEROO_INSTALL_DIR` to change it. With Go installed you can use `go install github.com/kilupskalvis/switcheroo/cmd/switcheroo@latest` instead.
 
 The sender also needs the Claude Code plugin, which adds `/switcheroo`:
 

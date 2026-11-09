@@ -22,4 +22,4 @@ The user wants to hand this conversation to another person, who will continue it
    switcheroo send --session ${CLAUDE_SESSION_ID}
    ```
 
-   Then tell the user the pickup code and the command the other person runs. The code works once and expires after an hour. If `switcheroo` is not installed, say so and point to `go install github.com/kilupskalvis/switcheroo/cmd/switcheroo@latest`.
+   Then tell the user the pickup code and the command the other person runs. The code works once and expires after an hour. If `switcheroo` is not installed, say so and point to `curl -fsSL https://raw.githubusercontent.com/kilupskalvis/switcheroo/main/install.sh | sh`.
