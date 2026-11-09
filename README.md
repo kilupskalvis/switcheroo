@@ -36,20 +36,24 @@ A CLI installed from a terminal does not update itself. Run the install line aga
 
 ## Use
 
-**Send.** Type `/switcheroo:send` in the session. Claude checks for unpushed work and offers to push it. It then sends the conversation with a handoff note describing what the next person needs to set up, and prints a pickup code. You can keep working or close the session; a background process holds the code for an hour.
+**Send.** Type `/switcheroo:send` in the session. Claude first reviews what the conversation depends on outside the transcript: every repository and worktree it touched, files outside them, external systems, running processes and access. It asks you how to make each available to the next person, for example by pushing a branch. It then sends the conversation with a handoff note and prints a pickup code. You can keep working or close the session; a background process holds the code for an hour.
 
-**Pick up.** In Claude Code, in the folder where you want to work, type `/switcheroo:receive <code>`. It shows the sender's handoff note, then open the conversation with the `/resume <id>` it gives you. From a terminal, `switcheroo pickup <code>` does both and opens Claude; add `--no-resume` to only install the session.
+**Pick up.** In Claude Code, in the folder where you want to work, type `/switcheroo:receive <code>`. It shows the sender's handoff note, then open the conversation with the `/resume <id>` it gives you.
 
-Both commands accept `--relay-url` and `--transit-relay` to use self-hosted magic-wormhole relays.
+**From a terminal.** `switcheroo pickup <code>` receives and opens Claude in one step; add `--no-resume` to only install the session. `switcheroo send --session <id> < note.txt` sends with a handoff note. Both accept `--relay-url` and `--transit-relay` to use self-hosted magic-wormhole relays; the plugin always uses the public ones. On a self-hosted relay a used or mistyped code can take up to 30 seconds to fail.
 
 ## Security
 
 - The transcript is sent exactly as it is, including anything it contains. Only send it to people who may see it.
-- The transfer is end-to-end encrypted with magic-wormhole (PAKE). The relays only see ciphertext.
+- The transfer is end-to-end encrypted with magic-wormhole (PAKE). The relays cannot read it, but they do see both IP addresses, when a transfer happens and roughly how big it is. Use your own relays if that matters.
 - A code works once. One wrong guess also kills it, and unused codes expire after an hour.
 - The receiver resumes in their own permission mode, never the sender's.
 - A received conversation is untrusted input, because it may contain instructions aimed at your Claude.
 
 ## Requirements
 
-Linux or macOS, with Claude Code installed on both machines. Both sides must be online at the same time.
+Linux or macOS, with Claude Code installed on both machines, and `curl` and `tar` for the plugin's first download. Both sides must be online at the same time.
+
+## Releasing
+
+Pushing a `v*` tag builds and publishes the CLI binaries. The plugin is pinned to one CLI release, so with every release also bump `version=` in `plugin/bin/switcheroo` and `version` in `plugin/.claude-plugin/plugin.json`.
