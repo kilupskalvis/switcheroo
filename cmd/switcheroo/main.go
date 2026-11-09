@@ -37,7 +37,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 	if len(args) > 0 {
 		switch args[0] {
 		case "send":
-			err = runSend(args[1:], stdout)
+			err = runSend(args[1:], stdout, stderr)
 		case "pickup":
 			err = runPickup(args[1:], stdout)
 		case "serve":
@@ -56,7 +56,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 	}
 }
 
-func runSend(args []string, stdout io.Writer) error {
+func runSend(args []string, stdout, stderr io.Writer) error {
 	fs, cfg := newFlagSet("send")
 	id := fs.String("session", "", "session ID to send")
 	timeout := fs.Duration("timeout", time.Hour, "how long the code stays valid")
@@ -72,7 +72,16 @@ func runSend(args []string, stdout io.Writer) error {
 		return err
 	}
 
-	path, err := send.NewService(session.NewStore(root), nil, dir).Snapshot(*id)
+	store := session.NewStore(root)
+	if os.Getenv("CLAUDECODE") != "" {
+		// Claude Code writes the reply that called us (the handoff message) just after the call starts.
+		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+		if err := store.AwaitCall(ctx, *id, "switcheroo send"); err != nil && !errors.Is(err, session.ErrNotFound) {
+			_, _ = fmt.Fprintln(stderr, "switcheroo: warning: the latest reply may be missing:", err)
+		}
+		cancel()
+	}
+	path, err := send.NewService(store, nil, dir).Snapshot(*id)
 	if err != nil {
 		return err
 	}
