@@ -1,0 +1,34 @@
+version: "2"
+linters:
+  default: standard
+  enable: [bodyclose, depguard, errorlint, gocritic, gosec, misspell, nilerr, noctx, revive, unconvert, unparam, usestdlibvars]
+  settings:
+    depguard:
+      rules:
+        domains:
+          list-mode: lax
+          files: ["**/internal/session/**", "**/internal/transfer/**", "**/internal/claude/**", "!$test"]
+          deny:
+            - { pkg: github.com/kilupskalvis/switcheroo/internal, desc: "domains import no sibling packages" }
+        send:
+          list-mode: lax
+          files: ["**/internal/send/**", "!$test"]
+          deny:
+            - { pkg: github.com/kilupskalvis/switcheroo/internal, desc: "send declares interfaces; wire concretes in cmd/switcheroo" }
+        pickup:
+          list-mode: lax
+          files: ["**/internal/pickup/**", "!$test"]
+          deny:
+            - { pkg: github.com/kilupskalvis/switcheroo/internal/transfer, desc: "declare an interface; wire in cmd/switcheroo" }
+            - { pkg: github.com/kilupskalvis/switcheroo/internal/claude, desc: "declare an interface; wire in cmd/switcheroo" }
+            - { pkg: github.com/kilupskalvis/switcheroo/internal/send, desc: "separate use case" }
+  exclusions:
+    rules:
+      - { path: _test\.go, linters: [gosec] }
+formatters:
+  enable: [gofumpt, goimports]
+  settings:
+    gofumpt:
+      module-path: github.com/kilupskalvis/switcheroo
+    goimports:
+      local-prefixes: [github.com/kilupskalvis/switcheroo]

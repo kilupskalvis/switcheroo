@@ -1,0 +1,11 @@
+pre-commit:
+  commands:
+    lint:
+      glob: "*.go"
+      run: go tool golangci-lint run ./...
+    test:
+      glob: "*.go"
+      run: go test -race ./...
+    tidy:
+      glob: "{go.mod,go.sum,*.go}"
+      run: go mod tidy -diff
