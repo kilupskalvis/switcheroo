@@ -129,6 +129,48 @@ func TestInstallSubagents(t *testing.T) {
 	}
 }
 
+func TestInstallCompletesPendingSend(t *testing.T) {
+	call := `{"type":"assistant","uuid":"a1","cwd":"/a/b","sessionId":"` + fixtureID + `","message":{"role":"assistant","content":[{"type":"tool_use","id":"t1","name":"Bash","input":{"command":"switcheroo send --session x <<'EOF'\nnote\nEOF"}}]}}`
+	root := t.TempDir()
+	writeFixture(t, root, []string{fixtureLines[0], call}, nil)
+	var bundle bytes.Buffer
+	if err := NewStore(root).Pack(fixtureID, "Next: add tests.", &bundle); err != nil {
+		t.Fatal(err)
+	}
+
+	id, _, got := installedLines(t, &bundle)
+
+	if len(got) != 3 {
+		t.Fatalf("got %d lines, want the call answered by a third:\n%s", len(got), strings.Join(got, "\n"))
+	}
+	res := decode(t, got[2])
+	for k, want := range map[string]any{"type": "user", "parentUuid": "a1", "sourceToolAssistantUUID": "a1", "sessionId": id, "cwd": "/x/y", "version": "2.0.0"} {
+		if res[k] != want {
+			t.Errorf("%s = %v, want %v", k, res[k], want)
+		}
+	}
+	if res["uuid"] == "" || res["timestamp"] == "" {
+		t.Errorf("missing uuid or timestamp: %s", got[2])
+	}
+	content := res["message"].(map[string]any)["content"].([]any)[0].(map[string]any)
+	if content["type"] != "tool_result" || content["tool_use_id"] != "t1" {
+		t.Errorf("not a result for t1: %v", content)
+	}
+	if text, _ := content["content"].(string); !strings.Contains(text, "Handoff note from the sender:\nNext: add tests.") {
+		t.Errorf("result lacks the note: %q", text)
+	}
+}
+
+func TestInstallLeavesAnsweredSend(t *testing.T) {
+	call := `{"type":"assistant","uuid":"a1","message":{"role":"assistant","content":[{"type":"tool_use","id":"t1","name":"Bash","input":{"command":"switcheroo send --session x"}}]}}`
+	result := `{"type":"user","uuid":"u1","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"t1","content":"Pickup code: 1-a-b"}]}}`
+	bundle := packFixture(t, []string{fixtureLines[0], call, result}, nil)
+
+	if _, _, got := installedLines(t, bundle); len(got) != 3 {
+		t.Errorf("got %d lines, want the transcript unchanged", len(got))
+	}
+}
+
 func TestInstallKeepsNonObjectLines(t *testing.T) {
 	bundle := packFixture(t, []string{fixtureLines[0], "", `{"type":"us`}, nil)
 

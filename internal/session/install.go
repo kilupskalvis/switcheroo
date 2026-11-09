@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 // MaxBundleBytes caps the unpacked size of a received bundle.
@@ -51,7 +52,7 @@ func (s *Store) Install(r io.Reader, cwd string) (id string, m Manifest, err err
 	for {
 		h, nextErr := tr.Next()
 		if errors.Is(nextErr, io.EOF) {
-			return id, m, nil
+			return id, m, completeSend(transcript, m, id, cwd)
 		}
 		if nextErr != nil {
 			return "", m, fmt.Errorf("bundle: %w", nextErr)
@@ -116,6 +117,53 @@ func writeFile(dest string, r io.Reader, rewrite bool, rw rewriter) error {
 	} else {
 		_, err = io.Copy(f, r)
 	}
+	return errors.Join(err, f.Close())
+}
+
+// completeSend answers the switcheroo send call the snapshot was taken during, so the
+// conversation ends cleanly with the handoff note as its last message.
+func completeSend(transcript string, m Manifest, id, cwd string) error {
+	call, err := pendingCall(transcript, "switcheroo send")
+	if err != nil || call.toolUseID == "" {
+		return err
+	}
+	uuid, err := newUUID()
+	if err != nil {
+		return err
+	}
+	text := "Handed off with switcheroo."
+	if m.Note != "" {
+		text += "\n\nHandoff note from the sender:\n" + m.Note
+	}
+	entry := encode(map[string]any{
+		"parentUuid":  call.entryUUID,
+		"isSidechain": false,
+		"type":        "user",
+		"message": map[string]any{"role": "user", "content": []map[string]any{
+			{"type": "tool_result", "tool_use_id": call.toolUseID, "content": text, "is_error": false},
+		}},
+		"uuid":                    uuid,
+		"timestamp":               time.Now().UTC().Format("2006-01-02T15:04:05.000Z"),
+		"toolUseResult":           map[string]any{"stdout": text, "stderr": "", "interrupted": false, "isImage": false, "noOutputExpected": false},
+		"sourceToolAssistantUUID": call.entryUUID,
+		"userType":                "external",
+		"cwd":                     cwd,
+		"sessionId":               id,
+		"version":                 m.ClaudeVersion,
+	})
+
+	f, err := os.OpenFile(transcript, os.O_RDWR|os.O_APPEND, 0) //nolint:gosec // our own freshly installed transcript
+	if err != nil {
+		return err
+	}
+	// A snapshot of a live session can end mid-line; start the entry on its own line.
+	if info, err := f.Stat(); err == nil && info.Size() > 0 {
+		last := make([]byte, 1)
+		if _, err := f.ReadAt(last, info.Size()-1); err == nil && last[0] != '\n' {
+			entry = append([]byte("\n"), entry...)
+		}
+	}
+	_, err = f.Write(append(entry, '\n'))
 	return errors.Join(err, f.Close())
 }
 

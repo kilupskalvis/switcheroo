@@ -21,8 +21,8 @@ func (s *Store) AwaitCall(ctx context.Context, id, command string) error {
 	tick := time.NewTicker(100 * time.Millisecond)
 	defer tick.Stop()
 	for {
-		found, err := hasPendingCall(path, command)
-		if err != nil || found {
+		call, err := pendingCall(path, command)
+		if err != nil || call.toolUseID != "" {
 			return err
 		}
 		select {
@@ -33,19 +33,26 @@ func (s *Store) AwaitCall(ctx context.Context, id, command string) error {
 	}
 }
 
-// hasPendingCall reports whether the transcript holds a matching tool call that has no result yet.
-func hasPendingCall(path, command string) (bool, error) {
-	f, err := os.Open(path) //nolint:gosec // path comes from the store's own glob
+// toolCall identifies a tool call and the transcript entry that holds it.
+type toolCall struct {
+	toolUseID, entryUUID string
+}
+
+// pendingCall returns the last tool call whose command contains command and that has no result yet; zero if none.
+func pendingCall(path, command string) (toolCall, error) {
+	f, err := os.Open(path) //nolint:gosec // path comes from the store or our own install
 	if err != nil {
-		return false, err
+		return toolCall{}, err
 	}
 	defer func() { _ = f.Close() }()
 
+	var last toolCall
 	pending := map[string]bool{}
 	r := bufio.NewReader(f)
 	for {
 		line, readErr := r.ReadBytes('\n')
 		var e struct {
+			UUID    string `json:"uuid"`
 			Message struct {
 				Content []struct {
 					Type      string `json:"type"`
@@ -62,16 +69,20 @@ func hasPendingCall(path, command string) (bool, error) {
 				switch {
 				case c.Type == "tool_use" && strings.Contains(c.Input.Command, command):
 					pending[c.ID] = true
+					last = toolCall{toolUseID: c.ID, entryUUID: e.UUID}
 				case c.Type == "tool_result":
 					delete(pending, c.ToolUseID)
 				}
 			}
 		}
 		if errors.Is(readErr, io.EOF) {
-			return len(pending) > 0, nil
+			if !pending[last.toolUseID] {
+				return toolCall{}, nil
+			}
+			return last, nil
 		}
 		if readErr != nil {
-			return false, readErr
+			return toolCall{}, readErr
 		}
 	}
 }
