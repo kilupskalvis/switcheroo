@@ -2,12 +2,8 @@
 
 Hand a live Claude Code conversation to another person. They continue the same conversation in their own Claude Code, with all of your context.
 
-```
-you:     /switcheroo:send
-         → Claude writes a short setup note, then prints: Pickup code: 7-crossover-clockwork
-them:    /switcheroo:receive 7-crossover-clockwork
-         → /resume <id> opens your conversation
-```
+1. You type `/switcheroo:send`. Claude writes a short handoff note and prints a pickup code, such as `7-crossover-clockwork`.
+2. The other person types `/switcheroo:receive 7-crossover-clockwork`, then `/resume <id>` to open your conversation.
 
 ## Install
 
