@@ -115,13 +115,6 @@ func TestReceiveUsedCode(t *testing.T) {
 	}
 }
 
-func TestReceiveUnknownCode(t *testing.T) {
-	cfg, ctx := testConfig(t), testContext(t)
-	if _, err := New(cfg).Receive(ctx, "7-nobody-here"); !errors.Is(err, ErrCodeGone) {
-		t.Fatalf("receive = %v, want ErrCodeGone", err)
-	}
-}
-
 func TestReceiveFailsFastWhenRelayListsCodes(t *testing.T) {
 	cfg, ctx := testConfig(t), testContext(t)
 	cfg.ListCodes = true

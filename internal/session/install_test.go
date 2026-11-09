@@ -198,7 +198,7 @@ func TestInstallRejectsHostile(t *testing.T) {
 	}
 }
 
-func TestInstallSizeCapOneByteOver(t *testing.T) {
+func TestInstallSizeCap(t *testing.T) {
 	bundle := packFixture(t, fixtureLines, nil)
 	gz, err := gzip.NewReader(bytes.NewReader(bundle.Bytes()))
 	if err != nil {
@@ -209,29 +209,18 @@ func TestInstallSizeCapOneByteOver(t *testing.T) {
 		t.Fatal(err)
 	}
 	old := maxBytes
-	maxBytes = int64(raw.Len()) - 1
 	t.Cleanup(func() { maxBytes = old })
 
-	root := t.TempDir()
-	if _, _, err := NewStore(root).Install(bundle, "/x/y"); err == nil {
-		t.Fatal("expected a size error")
-	}
-	if files := regularFiles(t, root); len(files) > 0 {
-		t.Errorf("left files behind: %v", files)
-	}
-}
-
-func TestInstallSizeCap(t *testing.T) {
-	bundle := packFixture(t, fixtureLines, nil)
-	old := maxBytes
-	maxBytes = 600
-	t.Cleanup(func() { maxBytes = old })
-
-	root := t.TempDir()
-	if _, _, err := NewStore(root).Install(bundle, "/x/y"); err == nil {
-		t.Fatal("expected a size error")
-	}
-	if files := regularFiles(t, root); len(files) > 0 {
-		t.Errorf("left files behind: %v", files)
+	for name, limit := range map[string]int64{"mid-stream": 600, "one byte over": int64(raw.Len()) - 1} {
+		t.Run(name, func(t *testing.T) {
+			maxBytes = limit
+			root := t.TempDir()
+			if _, _, err := NewStore(root).Install(bytes.NewReader(bundle.Bytes()), "/x/y"); err == nil {
+				t.Fatal("expected a size error")
+			}
+			if files := regularFiles(t, root); len(files) > 0 {
+				t.Errorf("left files behind: %v", files)
+			}
+		})
 	}
 }
