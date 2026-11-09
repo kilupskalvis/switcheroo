@@ -3,9 +3,9 @@
 Hand a live Claude Code conversation to another person. They continue the same conversation in their own Claude Code, with all of your context.
 
 ```
-you:     /switcheroo
+you:     /switcheroo:send
          → Claude writes a short setup note, then prints: Pickup code: 7-crossover-clockwork
-them:    /switcheroo 7-crossover-clockwork
+them:    /switcheroo:receive 7-crossover-clockwork
          → /resume <id> opens your conversation
 ```
 
@@ -19,7 +19,7 @@ curl -fsSL https://raw.githubusercontent.com/kilupskalvis/switcheroo/main/instal
 
 This installs to `~/.local/bin`; set `SWITCHEROO_INSTALL_DIR` to change it. With Go installed you can use `go install github.com/kilupskalvis/switcheroo/cmd/switcheroo@latest` instead.
 
-To send and receive from inside Claude Code, also add the plugin, which adds `/switcheroo`:
+To send and receive from inside Claude Code, also add the plugin, which adds `/switcheroo:send` and `/switcheroo:receive`:
 
 ```
 /plugin marketplace add kilupskalvis/switcheroo
@@ -34,9 +34,9 @@ The CLI does not update itself. Run the install line again to get the latest rel
 
 ## Use
 
-**Send.** Type `/switcheroo` in the session. Claude checks for unpushed work and offers to push it. It then sends the conversation with a handoff note describing what the next person needs to set up, and prints a pickup code. You can keep working or close the session; a background process holds the code for an hour.
+**Send.** Type `/switcheroo:send` in the session. Claude checks for unpushed work and offers to push it. It then sends the conversation with a handoff note describing what the next person needs to set up, and prints a pickup code. You can keep working or close the session; a background process holds the code for an hour.
 
-**Pick up.** In Claude Code, in the folder where you want to work, type `/switcheroo <code>`. It shows the sender's handoff note, then open the conversation with the `/resume <id>` it gives you. From a terminal, `switcheroo pickup <code>` does both and opens Claude; add `--no-resume` to only install the session.
+**Pick up.** In Claude Code, in the folder where you want to work, type `/switcheroo:receive <code>`. It shows the sender's handoff note, then open the conversation with the `/resume <id>` it gives you. From a terminal, `switcheroo pickup <code>` does both and opens Claude; add `--no-resume` to only install the session.
 
 Both commands accept `--relay-url` and `--transit-relay` to use self-hosted magic-wormhole relays.
 
