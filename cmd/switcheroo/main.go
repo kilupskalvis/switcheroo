@@ -11,6 +11,8 @@ import (
 	"os/signal"
 	"path/filepath"
 	"strings"
+	"syscall"
+	"text/tabwriter"
 	"time"
 
 	"github.com/kilupskalvis/switcheroo/internal/claude"
@@ -24,7 +26,9 @@ const usage = `usage:
   switcheroo send --session ID [--timeout 1h]   send a session; prints a one-time code
                                                  a handoff note can be piped to stdin
   switcheroo pickup [--no-resume] CODE          receive a session and resume it
-both accept --relay-url URL and --transit-relay HOST:PORT for self-hosted relays
+  switcheroo status                             list handoffs sent from this machine
+  switcheroo cancel CODE                        withdraw a code that has not been picked up
+send and pickup accept --relay-url URL and --transit-relay HOST:PORT for self-hosted relays
 `
 
 var errUsage = errors.New("usage")
@@ -43,6 +47,10 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 			err = runPickup(args[1:], stdout)
 		case "serve":
 			err = runServe(args[1:], stdout, stderr)
+		case "status":
+			err = runStatus(args[1:], stdout)
+		case "cancel":
+			err = runCancel(args[1:], stdout)
 		}
 	}
 	switch {
@@ -114,12 +122,63 @@ func runServe(args []string, stdout, stderr io.Writer) error {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), *timeout)
 	defer cancel()
+	// switcheroo cancel stops a waiting sender with SIGTERM.
+	ctx, stop := signal.NotifyContext(ctx, syscall.SIGTERM, os.Interrupt)
+	defer stop()
 
 	if err := send.NewService(nil, transfer.New(*cfg), "").Serve(ctx, *bundle, stdout); err != nil {
 		return err
 	}
 	_, err := fmt.Fprintln(stderr, "picked up", time.Now().Format(time.RFC3339))
 	return err
+}
+
+func runStatus(args []string, stdout io.Writer) error {
+	if len(args) > 0 {
+		return errUsage
+	}
+	svc, err := outbox()
+	if err != nil {
+		return err
+	}
+	hs, err := svc.Handoffs()
+	if err != nil {
+		return err
+	}
+	if len(hs) == 0 {
+		_, err = fmt.Fprintln(stdout, "No handoffs sent from this machine.")
+		return err
+	}
+	w := tabwriter.NewWriter(stdout, 0, 0, 2, ' ', 0)
+	_, _ = fmt.Fprintln(w, "CODE\tSTATE\tSENT\tSESSION")
+	for _, h := range hs[:min(len(hs), 10)] {
+		_, _ = fmt.Fprintf(w, "%s\t%s\t%s\t%s\n", h.Code, h.State, h.Started.Local().Format("2006-01-02 15:04"), h.Session)
+	}
+	return w.Flush()
+}
+
+func runCancel(args []string, stdout io.Writer) error {
+	if len(args) != 1 {
+		return errUsage
+	}
+	svc, err := outbox()
+	if err != nil {
+		return err
+	}
+	if err := svc.Cancel(args[0]); err != nil {
+		return err
+	}
+	_, err = fmt.Fprintf(stdout, "Cancelled %s; the code no longer works and the snapshot is deleted.\n", args[0])
+	return err
+}
+
+// outbox returns a send service over this machine's sent handoffs.
+func outbox() (*send.Service, error) {
+	dir, err := cacheDir()
+	if err != nil {
+		return nil, err
+	}
+	return send.NewService(nil, nil, dir), nil
 }
 
 func runPickup(args []string, stdout io.Writer) error {

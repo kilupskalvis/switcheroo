@@ -7,6 +7,9 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
+	"strings"
+	"time"
 )
 
 // Packer writes a session as a bundle.
@@ -44,7 +47,8 @@ func (s *Service) Snapshot(id, note string) (path string, err error) {
 	return f.Name(), nil
 }
 
-// Serve offers the snapshot at path, writes its code to codeOut and waits for the pickup; the snapshot is always removed.
+// Serve offers the snapshot at path, writes its code to codeOut and waits for the pickup, recording
+// the handoff's state next to the snapshot; the snapshot is always removed.
 func (s *Service) Serve(ctx context.Context, path string, codeOut io.Writer) error {
 	defer func() { _ = os.Remove(path) }()
 	f, err := os.Open(path) //nolint:gosec // path is a snapshot this service wrote
@@ -57,13 +61,23 @@ func (s *Service) Serve(ctx context.Context, path string, codeOut io.Writer) err
 	if err != nil {
 		return err
 	}
+	base := strings.TrimSuffix(path, ".tgz")
+	session := filepath.Base(base) // Snapshot names files <session>-<random>.tgz
+	if i := strings.LastIndex(session, "-"); i > 0 {
+		session = session[:i]
+	}
+	h := Handoff{Code: code, Session: session, PID: os.Getpid(), Started: time.Now(), State: Waiting}
+	if err := writeState(base+".json", h); err != nil {
+		return err
+	}
 	if _, err := fmt.Fprintln(codeOut, code); err != nil {
 		return err
 	}
 	select {
-	case err := <-done:
-		return err
+	case err = <-done:
 	case <-ctx.Done():
-		return ctx.Err()
+		err = ctx.Err()
 	}
+	h.State, h.Ended = outcome(err), time.Now()
+	return errors.Join(err, writeState(base+".json", h))
 }
