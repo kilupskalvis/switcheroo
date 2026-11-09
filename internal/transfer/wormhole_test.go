@@ -115,6 +115,31 @@ func TestReceiveUsedCode(t *testing.T) {
 	}
 }
 
+func TestReceiveAbandonedCode(t *testing.T) {
+	cfg, ctx := testConfig(t), testContext(t)
+	senderCtx, stopSender := context.WithCancel(ctx)
+	code, _, err := New(cfg).Offer(senderCtx, bytes.NewReader([]byte("secret")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(300 * time.Millisecond) // let the sender post its first message
+	stopSender()                       // like a cancelled or killed sender: that message stays in the mailbox
+
+	errs := make(chan error, 1)
+	go func() {
+		_, err := New(cfg).Receive(ctx, code)
+		errs <- err
+	}()
+	select {
+	case err := <-errs:
+		if !errors.Is(err, ErrCodeGone) {
+			t.Fatalf("receive = %v, want ErrCodeGone", err)
+		}
+	case <-time.After(handshakeTimeout + 5*time.Second):
+		t.Fatal("receive hung past the handshake timeout")
+	}
+}
+
 func TestReceiveFailsFastWhenRelayListsCodes(t *testing.T) {
 	cfg, ctx := testConfig(t), testContext(t)
 	cfg.ListCodes = true

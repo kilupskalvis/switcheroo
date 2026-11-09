@@ -87,13 +87,28 @@ func (w *Wormhole) Receive(ctx context.Context, code string) (io.Reader, error) 
 		}
 	}
 	// A dead code waits forever for a sender, so only the handshake is timed; the read keeps ctx.
-	ctx, cancel := context.WithCancel(ctx)
-	timer := time.AfterFunc(handshakeTimeout, cancel)
-	msg, err := w.client.Receive(ctx, code)
-	if !timer.Stop() {
+	// The library ignores ctx partway through the handshake, so we stop waiting on our side.
+	rctx, cancel := context.WithCancel(ctx)
+	type result struct {
+		msg *wormhole.IncomingMessage
+		err error
+	}
+	results := make(chan result, 1)
+	go func() {
+		msg, err := w.client.Receive(rctx, code)
+		results <- result{msg, err}
+	}()
+	var r result
+	select {
+	case r = <-results:
+	case <-time.After(handshakeTimeout):
 		cancel()
 		return nil, ErrCodeGone
+	case <-ctx.Done():
+		cancel()
+		return nil, ctx.Err()
 	}
+	msg, err := r.msg, r.err
 	if err != nil {
 		cancel()
 		return nil, err
