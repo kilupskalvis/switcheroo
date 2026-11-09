@@ -7,6 +7,7 @@ import (
 	"errors"
 	"io"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -53,6 +54,9 @@ func offerReceive(t *testing.T, cfg Config) {
 	code, done, err := New(cfg).Offer(ctx, bytes.NewReader(payload))
 	if err != nil {
 		t.Fatal(err)
+	}
+	if words := strings.Count(code, "-"); words != 4 {
+		t.Errorf("code %q has %d words, want 4", code, words)
 	}
 	r, err := New(cfg).Receive(ctx, code)
 	if err != nil {

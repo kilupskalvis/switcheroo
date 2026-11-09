@@ -47,6 +47,8 @@ func New(cfg Config) *Wormhole {
 			AppID:               AppID,
 			RendezvousURL:       cfg.RendezvousURL,
 			TransitRelayAddress: cfg.TransitRelay,
+			// Four words make guessing a code, the one attack open to a relay, about 1 in 4 billion.
+			PassPhraseComponentLength: 4,
 		},
 		listCodes: cfg.ListCodes || cfg.RendezvousURL == "",
 	}
