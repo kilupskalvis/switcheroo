@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/rand"
+	"errors"
 	"io"
 	"os"
 	"testing"
@@ -16,6 +17,7 @@ import (
 func TestMain(m *testing.M) {
 	// No transit relay in tests: peers connect directly, as the upstream tests do.
 	wormhole.DefaultTransitRelayAddress = ""
+	handshakeTimeout = 3 * time.Second
 	os.Exit(m.Run())
 }
 
@@ -72,6 +74,35 @@ func TestReceiveWrongCode(t *testing.T) {
 	}
 	if err := <-done; err == nil {
 		t.Fatal("offer survived a wrong guess")
+	}
+}
+
+func TestReceiveUsedCode(t *testing.T) {
+	cfg, ctx := testConfig(t), testContext(t)
+	code, done, err := New(cfg).Offer(ctx, bytes.NewReader([]byte("secret")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	r, err := New(cfg).Receive(ctx, code)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := io.ReadAll(r); err != nil {
+		t.Fatal(err)
+	}
+	if err := <-done; err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := New(cfg).Receive(ctx, code); !errors.Is(err, ErrCodeGone) {
+		t.Fatalf("second receive = %v, want ErrCodeGone", err)
+	}
+}
+
+func TestReceiveUnknownCode(t *testing.T) {
+	cfg, ctx := testConfig(t), testContext(t)
+	if _, err := New(cfg).Receive(ctx, "7-nobody-here"); !errors.Is(err, ErrCodeGone) {
+		t.Fatalf("receive = %v, want ErrCodeGone", err)
 	}
 }
 

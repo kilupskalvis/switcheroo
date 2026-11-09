@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"time"
 
 	"github.com/psanford/wormhole-william/wormhole"
 )
@@ -14,6 +15,12 @@ import (
 const AppID = "github.com/kilupskalvis/switcheroo"
 
 const bundleName = "switcheroo.tgz"
+
+// ErrCodeGone means no sender answered on the code in time.
+var ErrCodeGone = errors.New("no sender answered on this code: it was already used, mistyped, or has expired")
+
+// handshakeTimeout bounds the wait for a sender; a live one answers within seconds.
+var handshakeTimeout = 30 * time.Second
 
 // Config selects the relays; empty fields use the public magic-wormhole servers.
 type Config struct {
@@ -60,13 +67,36 @@ func (w *Wormhole) Offer(ctx context.Context, r io.ReadSeeker) (code string, don
 
 // Receive opens the offer behind code; anything but a switcheroo bundle is refused.
 func (w *Wormhole) Receive(ctx context.Context, code string) (io.Reader, error) {
+	// A dead code waits forever for a sender, so only the handshake is timed; the read keeps ctx.
+	ctx, cancel := context.WithCancel(ctx)
+	timer := time.AfterFunc(handshakeTimeout, cancel)
 	msg, err := w.client.Receive(ctx, code)
+	if !timer.Stop() {
+		cancel()
+		return nil, ErrCodeGone
+	}
 	if err != nil {
+		cancel()
 		return nil, err
 	}
 	if msg.Type != wormhole.TransferFile || msg.Name != bundleName {
 		_ = msg.Reject()
+		cancel()
 		return nil, fmt.Errorf("code %s does not carry a switcheroo bundle", code)
 	}
-	return msg, nil
+	return &cancelOnEnd{Reader: msg, cancel: cancel}, nil
+}
+
+// cancelOnEnd releases the receive context once the bundle has been read.
+type cancelOnEnd struct {
+	io.Reader
+	cancel context.CancelFunc
+}
+
+func (r *cancelOnEnd) Read(p []byte) (int, error) {
+	n, err := r.Reader.Read(p)
+	if err != nil {
+		r.cancel()
+	}
+	return n, err
 }
