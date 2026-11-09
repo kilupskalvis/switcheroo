@@ -11,7 +11,16 @@ them:    /switcheroo:receive 7-crossover-clockwork
 
 ## Install
 
-Both people need the CLI:
+Add the plugin in Claude Code. It adds `/switcheroo:send` and `/switcheroo:receive`:
+
+```
+/plugin marketplace add kilupskalvis/switcheroo
+/plugin install switcheroo@switcheroo
+```
+
+That is all you need. The first time you use it, the plugin downloads the `switcheroo` release it is pinned to into `~/.cache/switcheroo/bin` and checks its checksum.
+
+To also use the CLI from a terminal (`switcheroo pickup <code>`), install it:
 
 ```
 curl -fsSL https://raw.githubusercontent.com/kilupskalvis/switcheroo/main/install.sh | sh
@@ -19,18 +28,11 @@ curl -fsSL https://raw.githubusercontent.com/kilupskalvis/switcheroo/main/instal
 
 This installs to `~/.local/bin`; set `SWITCHEROO_INSTALL_DIR` to change it. With Go installed you can use `go install github.com/kilupskalvis/switcheroo/cmd/switcheroo@latest` instead.
 
-To send and receive from inside Claude Code, also add the plugin, which adds `/switcheroo:send` and `/switcheroo:receive`:
-
-```
-/plugin marketplace add kilupskalvis/switcheroo
-/plugin install switcheroo@switcheroo
-```
-
 ### Updates
 
-Claude Code does not auto-update third-party plugins by default. Turn it on once: run `/plugin`, open **Marketplaces**, select `switcheroo`, and choose **Enable auto-update**. The plugin then updates when Claude Code starts.
+Claude Code does not auto-update third-party plugins by default. Turn it on once: run `/plugin`, open **Marketplaces**, select `switcheroo`, and choose **Enable auto-update**. The plugin then updates when Claude Code starts, and brings the matching CLI release with it.
 
-The CLI does not update itself. Run the install line again to get the latest release.
+A CLI installed from a terminal does not update itself. Run the install line again to get the latest release.
 
 ## Use
 

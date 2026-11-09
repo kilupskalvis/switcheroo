@@ -1,18 +1,16 @@
 ---
 description: Hand this conversation to another person with a one-time pickup code
-allowed-tools: Bash(switcheroo send:*), Bash(git status:*), Bash(git log:*)
+allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/bin/switcheroo send:*), Bash(git status:*), Bash(git log:*)
 ---
 
 The other person will continue this conversation in their own Claude Code on their own machine. They receive this transcript exactly as it is, but nothing else from this machine.
-
-If `switcheroo` is not installed, say so and point to `curl -fsSL https://raw.githubusercontent.com/kilupskalvis/switcheroo/main/install.sh | sh`.
 
 1. If the working directory is a git repository, run `git status --short --branch` and `git log --oneline @{u}..` to find uncommitted changes and unpushed commits. If there are any, tell the user what you found and ask whether to push them before handing off. Stop and wait for the answer; do not continue in this turn.
 
 2. Send the conversation with a handoff note for the next person, passed on stdin:
 
    ```
-   switcheroo send --session ${CLAUDE_SESSION_ID} <<'EOF'
+   ${CLAUDE_PLUGIN_ROOT}/bin/switcheroo send --session ${CLAUDE_SESSION_ID} <<'EOF'
    <handoff note>
    EOF
    ```
