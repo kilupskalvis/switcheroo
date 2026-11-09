@@ -37,7 +37,16 @@ func testContext(t *testing.T) context.Context {
 }
 
 func TestOfferReceive(t *testing.T) {
-	cfg, ctx := testConfig(t), testContext(t)
+	for _, list := range []bool{false, true} {
+		cfg := testConfig(t)
+		cfg.ListCodes = list
+		offerReceive(t, cfg)
+	}
+}
+
+func offerReceive(t *testing.T, cfg Config) {
+	t.Helper()
+	ctx := testContext(t)
 	payload := make([]byte, 1<<20)
 	_, _ = rand.Read(payload)
 
@@ -77,8 +86,9 @@ func TestReceiveWrongCode(t *testing.T) {
 	}
 }
 
-func TestReceiveUsedCode(t *testing.T) {
-	cfg, ctx := testConfig(t), testContext(t)
+// usedCode returns a code whose bundle has already been picked up.
+func usedCode(ctx context.Context, t *testing.T, cfg Config) string {
+	t.Helper()
 	code, done, err := New(cfg).Offer(ctx, bytes.NewReader([]byte("secret")))
 	if err != nil {
 		t.Fatal(err)
@@ -93,6 +103,12 @@ func TestReceiveUsedCode(t *testing.T) {
 	if err := <-done; err != nil {
 		t.Fatal(err)
 	}
+	return code
+}
+
+func TestReceiveUsedCode(t *testing.T) {
+	cfg, ctx := testConfig(t), testContext(t)
+	code := usedCode(ctx, t, cfg)
 
 	if _, err := New(cfg).Receive(ctx, code); !errors.Is(err, ErrCodeGone) {
 		t.Fatalf("second receive = %v, want ErrCodeGone", err)
@@ -103,6 +119,25 @@ func TestReceiveUnknownCode(t *testing.T) {
 	cfg, ctx := testConfig(t), testContext(t)
 	if _, err := New(cfg).Receive(ctx, "7-nobody-here"); !errors.Is(err, ErrCodeGone) {
 		t.Fatalf("receive = %v, want ErrCodeGone", err)
+	}
+}
+
+func TestReceiveFailsFastWhenRelayListsCodes(t *testing.T) {
+	cfg, ctx := testConfig(t), testContext(t)
+	cfg.ListCodes = true
+	for name, code := range map[string]string{
+		"used":    usedCode(ctx, t, cfg),
+		"unknown": "7-nobody-here",
+	} {
+		t.Run(name, func(t *testing.T) {
+			start := time.Now()
+			if _, err := New(cfg).Receive(ctx, code); !errors.Is(err, ErrCodeGone) {
+				t.Fatalf("receive = %v, want ErrCodeGone", err)
+			}
+			if elapsed := time.Since(start); elapsed > handshakeTimeout/3 {
+				t.Errorf("took %s, want an answer from the code list", elapsed)
+			}
+		})
 	}
 }
 
