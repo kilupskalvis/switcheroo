@@ -36,7 +36,7 @@ A CLI installed from a terminal does not update itself. Run the install line aga
 
 **Check or withdraw.** `/switcheroo:status` lists what you sent from this machine and whether it was picked up. `/switcheroo:cancel <code>` withdraws a code that is still waiting and deletes its snapshot.
 
-**Pick up.** In Claude Code, in the folder where you want to work, type `/switcheroo:receive <code>`. It shows the sender's handoff note and checks it against your machine with read-only checks: the repository, branch or commit, files, MCP servers and plugins it names. Then open the conversation with the `/resume <id>` it gives you; it ends with the handoff note.
+**Pick up.** In Claude Code, in the folder where you want to work, type `/switcheroo:receive <code>`. It shows the sender's handoff note; then open the conversation with the `/resume <id>` it gives you. The conversation ends with the same note.
 
 **From a terminal.** `switcheroo pickup <code>` receives and opens Claude in one step; add `--no-resume` to only install the session. `switcheroo send --session <id> < note.txt` sends with a handoff note, and `switcheroo status` and `switcheroo cancel <code>` work as above. Both accept `--relay-url` and `--transit-relay` to use self-hosted magic-wormhole relays; the plugin always uses the public ones. On a self-hosted relay a used or mistyped code can take up to 30 seconds to fail, and so can a cancelled code on any relay.
 
