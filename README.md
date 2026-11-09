@@ -34,9 +34,9 @@ The CLI does not update itself. Run the install line again to get the latest rel
 
 ## Use
 
-**Send.** Type `/switcheroo` in the session. Claude checks for unpushed work and offers to push it. It then writes a handoff message describing what the next person needs to set up, and prints a pickup code. You can keep working or close the session; a background process holds the code for an hour.
+**Send.** Type `/switcheroo` in the session. Claude checks for unpushed work and offers to push it. It then sends the conversation with a handoff note describing what the next person needs to set up, and prints a pickup code. You can keep working or close the session; a background process holds the code for an hour.
 
-**Pick up.** In Claude Code, in the folder where you want to work, type `/switcheroo <code>`, then open the conversation with the `/resume <id>` it gives you. From a terminal, `switcheroo pickup <code>` does both and opens Claude; add `--no-resume` to only install the session.
+**Pick up.** In Claude Code, in the folder where you want to work, type `/switcheroo <code>`. It shows the sender's handoff note, then open the conversation with the `/resume <id>` it gives you. From a terminal, `switcheroo pickup <code>` does both and opens Claude; add `--no-resume` to only install the session.
 
 Both commands accept `--relay-url` and `--transit-relay` to use self-hosted magic-wormhole relays.
 

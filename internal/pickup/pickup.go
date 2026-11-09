@@ -56,6 +56,9 @@ func (s *Service) Pickup(ctx context.Context, code, cwd string, resume bool) err
 		_, _ = fmt.Fprintf(s.out, "warning: session was recorded with Claude Code %s, you have %s\n", m.ClaudeVersion, v)
 	}
 	_, _ = fmt.Fprintln(s.out, untrusted)
+	if m.Note != "" {
+		_, _ = fmt.Fprintf(s.out, "Handoff note from the sender:\n%s\n", m.Note)
+	}
 
 	if !resume {
 		_, _ = fmt.Fprintf(s.out, "Resume it with: claude --resume %s\n", id)

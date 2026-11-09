@@ -76,7 +76,7 @@ func TestPackRoundTrip(t *testing.T) {
 	proj := writeFixture(t, root, fixtureLines, map[string]string{"tool-results/x.txt": "big output"})
 
 	var buf bytes.Buffer
-	if err := NewStore(root).Pack(fixtureID, &buf); err != nil {
+	if err := NewStore(root).Pack(fixtureID, "Next: add tests.", &buf); err != nil {
 		t.Fatal(err)
 	}
 	names, files := untar(t, &buf)
@@ -88,7 +88,7 @@ func TestPackRoundTrip(t *testing.T) {
 	if err := json.Unmarshal(files["manifest.json"], &m); err != nil {
 		t.Fatal(err)
 	}
-	want := Manifest{Format: FormatVersion, SessionID: fixtureID, Cwd: "/a/b", SessionDir: filepath.Join(proj, fixtureID), ClaudeVersion: "2.1.0"}
+	want := Manifest{Format: FormatVersion, SessionID: fixtureID, Cwd: "/a/b", SessionDir: filepath.Join(proj, fixtureID), ClaudeVersion: "2.1.0", Note: "Next: add tests."}
 	m.CreatedAt = want.CreatedAt
 	if m != want {
 		t.Errorf("manifest = %+v, want %+v", m, want)
@@ -107,7 +107,7 @@ func TestPackWithoutSidecar(t *testing.T) {
 	writeFixture(t, root, fixtureLines, nil)
 
 	var buf bytes.Buffer
-	if err := NewStore(root).Pack(fixtureID, &buf); err != nil {
+	if err := NewStore(root).Pack(fixtureID, "", &buf); err != nil {
 		t.Fatal(err)
 	}
 	names, _ := untar(t, &buf)
@@ -120,7 +120,7 @@ func TestPackWithoutSidecar(t *testing.T) {
 
 func TestPackUnknownID(t *testing.T) {
 	root := t.TempDir()
-	err := NewStore(root).Pack("nope", io.Discard)
+	err := NewStore(root).Pack("nope", "", io.Discard)
 	if !errors.Is(err, ErrNotFound) {
 		t.Fatalf("err = %v, want ErrNotFound", err)
 	}

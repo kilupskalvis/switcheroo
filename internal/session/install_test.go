@@ -18,7 +18,7 @@ func packFixture(t *testing.T, lines []string, sidecar map[string]string) *bytes
 	root := t.TempDir()
 	writeFixture(t, root, lines, sidecar)
 	var buf bytes.Buffer
-	if err := NewStore(root).Pack(fixtureID, &buf); err != nil {
+	if err := NewStore(root).Pack(fixtureID, "", &buf); err != nil {
 		t.Fatal(err)
 	}
 	return &buf
@@ -72,7 +72,7 @@ func TestInstallRewrites(t *testing.T) {
 	}
 	writeFixture(t, srcRoot, lines, map[string]string{"tool-results/x.txt": "big"})
 	var bundle bytes.Buffer
-	if err := NewStore(srcRoot).Pack(fixtureID, &bundle); err != nil {
+	if err := NewStore(srcRoot).Pack(fixtureID, "", &bundle); err != nil {
 		t.Fatal(err)
 	}
 

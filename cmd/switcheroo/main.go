@@ -22,6 +22,7 @@ import (
 
 const usage = `usage:
   switcheroo send --session ID [--timeout 1h]   send a session; prints a one-time code
+                                                 a handoff note can be piped to stdin
   switcheroo pickup [--no-resume] CODE          receive a session and resume it
 both accept --relay-url URL and --transit-relay HOST:PORT for self-hosted relays
 `
@@ -29,15 +30,15 @@ both accept --relay-url URL and --transit-relay HOST:PORT for self-hosted relays
 var errUsage = errors.New("usage")
 
 func main() {
-	os.Exit(run(os.Args[1:], os.Stdout, os.Stderr))
+	os.Exit(run(os.Args[1:], os.Stdin, os.Stdout, os.Stderr))
 }
 
-func run(args []string, stdout, stderr io.Writer) int {
+func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	err := errUsage
 	if len(args) > 0 {
 		switch args[0] {
 		case "send":
-			err = runSend(args[1:], stdout, stderr)
+			err = runSend(args[1:], stdin, stdout, stderr)
 		case "pickup":
 			err = runPickup(args[1:], stdout)
 		case "serve":
@@ -56,12 +57,20 @@ func run(args []string, stdout, stderr io.Writer) int {
 	}
 }
 
-func runSend(args []string, stdout, stderr io.Writer) error {
+func runSend(args []string, stdin io.Reader, stdout, stderr io.Writer) error {
 	fs, cfg := newFlagSet("send")
 	id := fs.String("session", "", "session ID to send")
 	timeout := fs.Duration("timeout", time.Hour, "how long the code stays valid")
 	if err := fs.Parse(args); err != nil || *id == "" || fs.NArg() > 0 {
 		return errUsage
+	}
+	inClaude := os.Getenv("CLAUDECODE") != ""
+	note, err := readNote(stdin)
+	if err != nil {
+		return fmt.Errorf("read handoff note: %w", err)
+	}
+	if note == "" && inClaude {
+		return errors.New("write a handoff note for the next person and pipe it to stdin, e.g. switcheroo send --session ID <<'EOF' ... EOF")
 	}
 	root, err := claudeRoot()
 	if err != nil {
@@ -73,15 +82,15 @@ func runSend(args []string, stdout, stderr io.Writer) error {
 	}
 
 	store := session.NewStore(root)
-	if os.Getenv("CLAUDECODE") != "" {
-		// Claude Code writes the reply that called us (the handoff message) just after the call starts.
+	if inClaude {
+		// Claude Code writes the reply that called us just after the call starts.
 		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 		if err := store.AwaitCall(ctx, *id, "switcheroo send"); err != nil && !errors.Is(err, session.ErrNotFound) {
 			_, _ = fmt.Fprintln(stderr, "switcheroo: warning: the latest reply may be missing:", err)
 		}
 		cancel()
 	}
-	path, err := send.NewService(store, nil, dir).Snapshot(*id)
+	path, err := send.NewService(store, nil, dir).Snapshot(*id, note)
 	if err != nil {
 		return err
 	}
@@ -142,6 +151,19 @@ func newFlagSet(name string) (*flag.FlagSet, *transfer.Config) {
 	fs.StringVar(&cfg.RendezvousURL, "relay-url", "", "rendezvous relay URL")
 	fs.StringVar(&cfg.TransitRelay, "transit-relay", "", "transit relay host:port")
 	return fs, cfg
+}
+
+const maxNote = 64 << 10
+
+// readNote reads the handoff note piped to stdin; a terminal or /dev/null means no note.
+func readNote(stdin io.Reader) (string, error) {
+	if f, ok := stdin.(*os.File); ok {
+		if info, err := f.Stat(); err == nil && info.Mode()&os.ModeCharDevice != 0 {
+			return "", nil
+		}
+	}
+	b, err := io.ReadAll(io.LimitReader(stdin, maxNote))
+	return strings.TrimSpace(string(b)), err
 }
 
 func serveFlags(timeout time.Duration, cfg *transfer.Config) []string {

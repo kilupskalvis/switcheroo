@@ -20,6 +20,7 @@ type Manifest struct {
 	SessionDir    string    `json:"sessionDir"`
 	ClaudeVersion string    `json:"claudeVersion"`
 	CreatedAt     time.Time `json:"createdAt"`
+	Note          string    `json:"note,omitempty"`
 }
 
 // scanTranscript reads the first cwd and the last Claude Code version from a transcript.

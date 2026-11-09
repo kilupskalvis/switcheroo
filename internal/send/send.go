@@ -11,7 +11,7 @@ import (
 
 // Packer writes a session as a bundle.
 type Packer interface {
-	Pack(id string, w io.Writer) error
+	Pack(id, note string, w io.Writer) error
 }
 
 // Offerer makes a bundle available under a one-time code.
@@ -31,13 +31,13 @@ func NewService(p Packer, o Offerer, dir string) *Service {
 	return &Service{packer: p, offerer: o, dir: dir}
 }
 
-// Snapshot packs session id into a private file and returns its path.
-func (s *Service) Snapshot(id string) (path string, err error) {
+// Snapshot packs session id and its handoff note into a private file and returns its path.
+func (s *Service) Snapshot(id, note string) (path string, err error) {
 	f, err := os.CreateTemp(s.dir, id+"-*.tgz")
 	if err != nil {
 		return "", err
 	}
-	if err = errors.Join(s.packer.Pack(id, f), f.Close()); err != nil {
+	if err = errors.Join(s.packer.Pack(id, note, f), f.Close()); err != nil {
 		_ = os.Remove(f.Name())
 		return "", err
 	}

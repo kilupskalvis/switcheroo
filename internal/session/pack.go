@@ -14,8 +14,8 @@ import (
 	"time"
 )
 
-// Pack writes the session with the given ID to w as a gzipped tar bundle, unchanged.
-func (s *Store) Pack(id string, w io.Writer) error {
+// Pack writes the session with the given ID and the sender's handoff note to w as a gzipped tar bundle, unchanged.
+func (s *Store) Pack(id, note string, w io.Writer) error {
 	file, err := s.locate(id)
 	if err != nil {
 		return err
@@ -32,6 +32,7 @@ func (s *Store) Pack(id string, w io.Writer) error {
 		SessionDir:    dir,
 		ClaudeVersion: version,
 		CreatedAt:     time.Now().UTC(),
+		Note:          note,
 	})
 	if err != nil {
 		return err

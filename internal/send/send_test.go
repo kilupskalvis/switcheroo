@@ -13,11 +13,11 @@ type fakePacker struct {
 	err error
 }
 
-func (f fakePacker) Pack(id string, w io.Writer) error {
+func (f fakePacker) Pack(id, note string, w io.Writer) error {
 	if f.err != nil {
 		return f.err
 	}
-	_, err := io.WriteString(w, "bundle-"+id)
+	_, err := io.WriteString(w, "bundle-"+id+"-"+note)
 	return err
 }
 
@@ -44,7 +44,7 @@ func emptyDir(t *testing.T, dir string) {
 
 func TestSnapshotRemovesOnPackError(t *testing.T) {
 	dir := t.TempDir()
-	if _, err := NewService(fakePacker{err: errors.New("boom")}, nil, dir).Snapshot("abc"); err == nil {
+	if _, err := NewService(fakePacker{err: errors.New("boom")}, nil, dir).Snapshot("abc", ""); err == nil {
 		t.Fatal("expected the pack error")
 	}
 	emptyDir(t, dir)
@@ -55,7 +55,7 @@ func TestServeWritesCodeAndRemoves(t *testing.T) {
 	off := &fakeOfferer{done: make(chan error, 1)}
 	off.done <- nil
 	s := NewService(fakePacker{}, off, dir)
-	path, err := s.Snapshot("abc")
+	path, err := s.Snapshot("abc", "note")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -70,7 +70,7 @@ func TestServeWritesCodeAndRemoves(t *testing.T) {
 	if out.String() != "7-a-b\n" {
 		t.Errorf("code output = %q", out.String())
 	}
-	if string(off.got) != "bundle-abc" {
+	if string(off.got) != "bundle-abc-note" {
 		t.Errorf("offered %q", off.got)
 	}
 	emptyDir(t, dir)
@@ -79,7 +79,7 @@ func TestServeWritesCodeAndRemoves(t *testing.T) {
 func TestServeTimeout(t *testing.T) {
 	dir := t.TempDir()
 	s := NewService(fakePacker{}, &fakeOfferer{done: make(chan error)}, dir)
-	path, err := s.Snapshot("abc")
+	path, err := s.Snapshot("abc", "")
 	if err != nil {
 		t.Fatal(err)
 	}
