@@ -1,5 +1,5 @@
 {
   "name": "switcheroo",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Hand a live Claude Code conversation to another person with a one-time code"
 }

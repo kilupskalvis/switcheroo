@@ -31,4 +31,4 @@ The other person will continue this conversation in their own Claude Code on the
 
    Keep it short and concrete. Do not put secrets in it.
 
-3. Tell the user the pickup code. The other person receives it by typing `/switcheroo:receive <code>` in Claude Code, in the folder where they want to continue, or by running `switcheroo pickup <code>` in a terminal. The code works once and expires after an hour.
+3. Tell the user the pickup code. The other person receives it by typing `/switcheroo:receive <code>` in Claude Code, in the folder where they want to continue, or by running `switcheroo pickup <code>` in a terminal. The code works once and expires after an hour; `/switcheroo:status` shows whether it was picked up and `/switcheroo:cancel <code>` withdraws it.

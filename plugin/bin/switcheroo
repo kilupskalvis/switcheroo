@@ -3,7 +3,7 @@
 # Bump version with every CLI release.
 set -eu
 
-version=v0.1.3
+version=v0.1.4
 repo=kilupskalvis/switcheroo
 dir=${XDG_CACHE_HOME:-$HOME/.cache}/switcheroo/bin/$version
 bin=$dir/switcheroo
@@ -35,5 +35,9 @@ if [ ! -x "$bin" ]; then
   tar -xzf "$tmp/$asset" -C "$tmp" switcheroo
   mkdir -p "$dir"
   mv -f "$tmp/switcheroo" "$bin"
+  # Keep only this version.
+  for old in "${dir%/*}"/*; do
+    [ "$old" = "$dir" ] || rm -rf "$old"
+  done
 fi
 exec "$bin" "$@"
