@@ -26,6 +26,12 @@ To send and receive from inside Claude Code, also add the plugin, which adds `/s
 /plugin install switcheroo@switcheroo
 ```
 
+### Updates
+
+Claude Code does not auto-update third-party plugins by default. Turn it on once: run `/plugin`, open **Marketplaces**, select `switcheroo`, and choose **Enable auto-update**. The plugin then updates when Claude Code starts.
+
+The CLI does not update itself. Run the install line again to get the latest release.
+
 ## Use
 
 **Send.** Type `/switcheroo` in the session. Claude checks for unpushed work and offers to push it. It then writes a handoff message describing what the next person needs to set up, and prints a pickup code. You can keep working or close the session; a background process holds the code for an hour.
