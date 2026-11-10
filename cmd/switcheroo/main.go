@@ -24,7 +24,7 @@ import (
 
 const usage = `usage:
   switcheroo send --session ID [--timeout 1h]   send a session; prints a one-time code
-                                                 a handoff note can be piped to stdin
+                                                 a short note for the receiver can be piped to stdin
   switcheroo pickup [--no-resume] CODE          receive a session and resume it
   switcheroo status                             list handoffs sent from this machine
   switcheroo cancel CODE                        withdraw a code that has not been picked up
@@ -75,10 +75,10 @@ func runSend(args []string, stdin io.Reader, stdout, stderr io.Writer) error {
 	inClaude := os.Getenv("CLAUDECODE") != ""
 	note, err := readNote(stdin)
 	if err != nil {
-		return fmt.Errorf("read handoff note: %w", err)
+		return fmt.Errorf("read note: %w", err)
 	}
 	if note == "" && inClaude {
-		return errors.New("write a handoff note for the next person and pipe it to stdin, e.g. switcheroo send --session ID <<'EOF' ... EOF")
+		return errors.New("pipe a short note for the receiver to stdin, e.g. switcheroo send --session ID <<'EOF' ... EOF")
 	}
 	root, err := claudeRoot()
 	if err != nil {
@@ -93,10 +93,14 @@ func runSend(args []string, stdin io.Reader, stdout, stderr io.Writer) error {
 	if inClaude {
 		// Claude Code writes the reply that called us just after the call starts.
 		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-		if err := store.AwaitCall(ctx, *id, "switcheroo send"); err != nil && !errors.Is(err, session.ErrNotFound) {
+		err := store.AwaitCall(ctx, *id, "switcheroo send")
+		cancel()
+		switch {
+		case errors.Is(err, session.ErrNoHandoffMessage):
+			return err
+		case err != nil && !errors.Is(err, session.ErrNotFound):
 			_, _ = fmt.Fprintln(stderr, "switcheroo: warning: the latest reply may be missing:", err)
 		}
-		cancel()
 	}
 	path, err := send.NewService(store, nil, dir).Snapshot(*id, note)
 	if err != nil {
@@ -214,7 +218,7 @@ func newFlagSet(name string) (*flag.FlagSet, *transfer.Config) {
 
 const maxNote = 64 << 10
 
-// readNote reads the handoff note piped to stdin; a terminal or /dev/null means no note.
+// readNote reads the note piped to stdin; a terminal or /dev/null means no note.
 func readNote(stdin io.Reader) (string, error) {
 	if f, ok := stdin.(*os.File); ok {
 		if info, err := f.Stat(); err == nil && info.Mode()&os.ModeCharDevice != 0 {

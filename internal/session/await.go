@@ -11,8 +11,12 @@ import (
 	"time"
 )
 
+// ErrNoHandoffMessage means the send call was not directly preceded by Claude's handoff message.
+var ErrNoHandoffMessage = errors.New("write the handoff message for the next person as your reply, then run switcheroo send right after it")
+
 // AwaitCall waits until the transcript records a still-running tool call whose command contains command.
 // Claude Code writes a reply shortly after its tool calls start, so this proves the reply is on disk.
+// It returns ErrNoHandoffMessage when Claude's text does not come directly before the call.
 func (s *Store) AwaitCall(ctx context.Context, id, command string) error {
 	path, err := s.locate(id)
 	if err != nil {
@@ -22,8 +26,14 @@ func (s *Store) AwaitCall(ctx context.Context, id, command string) error {
 	defer tick.Stop()
 	for {
 		call, err := pendingCall(path, command)
-		if err != nil || call.toolUseID != "" {
+		if err != nil {
 			return err
+		}
+		if call.toolUseID != "" {
+			if !call.afterText {
+				return ErrNoHandoffMessage
+			}
+			return nil
 		}
 		select {
 		case <-ctx.Done():
@@ -36,6 +46,8 @@ func (s *Store) AwaitCall(ctx context.Context, id, command string) error {
 // toolCall identifies a tool call and the transcript entry that holds it.
 type toolCall struct {
 	toolUseID, entryUUID string
+	// afterText is whether Claude's text came directly before the call, in the same turn.
+	afterText bool
 }
 
 // pendingCall returns the last tool call whose command contains command and that has no result yet; zero if none.
@@ -48,29 +60,40 @@ func pendingCall(path, command string) (toolCall, error) {
 
 	var last toolCall
 	pending := map[string]bool{}
+	afterText := false
 	r := bufio.NewReader(f)
 	for {
 		line, readErr := r.ReadBytes('\n')
 		var e struct {
+			Type    string `json:"type"`
 			UUID    string `json:"uuid"`
 			Message struct {
-				Content []struct {
-					Type      string `json:"type"`
-					ID        string `json:"id"`
-					ToolUseID string `json:"tool_use_id"`
-					Input     struct {
-						Command string `json:"command"`
-					} `json:"input"`
-				} `json:"content"`
+				Content json.RawMessage `json:"content"`
 			} `json:"message"`
 		}
+		var blocks []struct {
+			Type      string `json:"type"`
+			ID        string `json:"id"`
+			ToolUseID string `json:"tool_use_id"`
+			Input     struct {
+				Command string `json:"command"`
+			} `json:"input"`
+		}
 		if json.Unmarshal(line, &e) == nil {
-			for _, c := range e.Message.Content {
-				switch {
-				case c.Type == "tool_use" && strings.Contains(c.Input.Command, command):
-					pending[c.ID] = true
-					last = toolCall{toolUseID: c.ID, entryUUID: e.UUID}
-				case c.Type == "tool_result":
+			if json.Unmarshal(e.Message.Content, &blocks) != nil && e.Type == "user" {
+				afterText = false // a prompt typed as plain text starts a new turn
+			}
+			for _, c := range blocks {
+				switch c.Type {
+				case "text":
+					afterText = e.Type == "assistant"
+				case "tool_use":
+					if strings.Contains(c.Input.Command, command) {
+						pending[c.ID] = true
+						last = toolCall{toolUseID: c.ID, entryUUID: e.UUID, afterText: afterText}
+					}
+					afterText = false
+				case "tool_result":
 					delete(pending, c.ToolUseID)
 				}
 			}

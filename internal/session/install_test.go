@@ -156,8 +156,8 @@ func TestInstallCompletesPendingSend(t *testing.T) {
 	if content["type"] != "tool_result" || content["tool_use_id"] != "t1" {
 		t.Errorf("not a result for t1: %v", content)
 	}
-	if text, _ := content["content"].(string); !strings.Contains(text, "Handoff note from the sender:\nNext: add tests.") {
-		t.Errorf("result lacks the note: %q", text)
+	if text := content["content"]; text != "Handed off with switcheroo." {
+		t.Errorf("result = %q, want only the handoff confirmation", text)
 	}
 }
 

@@ -2,7 +2,7 @@
 
 Hand a live Claude Code conversation to another person. They continue the same conversation in their own Claude Code, with all of your context.
 
-1. You type `/switcheroo:send`. Claude writes a short handoff note and prints a pickup code, such as `7-crossover-clockwork-sawdust-pheasant`.
+1. You type `/switcheroo:send`. Claude writes a handoff message into the conversation and prints a pickup code, such as `7-crossover-clockwork-sawdust-pheasant`.
 2. The other person types `/switcheroo:receive 7-crossover-clockwork-sawdust-pheasant`, then `/resume <id>` to open your conversation.
 
 ## Install
@@ -32,13 +32,13 @@ A CLI installed from a terminal does not update itself. Run the install line aga
 
 ## Use
 
-**Send.** Type `/switcheroo:send` in the session. Claude first reviews what the conversation depends on outside the transcript: every repository and worktree it touched, files outside them, external systems, running processes and access. It asks you how to make each available to the next person, for example by pushing a branch. It then sends the conversation with a handoff note and prints a pickup code. You can keep working or close the session; a background process holds the code for an hour.
+**Send.** Type `/switcheroo:send` in the session. Claude first reviews what the conversation depends on outside the transcript: every repository and worktree it touched, files outside them, external systems, running processes and access. It asks you how to make each available to the next person, for example by pushing a branch. It then writes a handoff message as its reply: what the conversation contains, where the work lives, and what the next person needs to set up. Right after it, it sends the conversation with a one-line note and prints a pickup code. You can keep working or close the session; a background process holds the code for an hour.
 
 **Check or withdraw.** `/switcheroo:status` lists what you sent from this machine and whether it was picked up. `/switcheroo:cancel <code>` withdraws a code that is still waiting and deletes its snapshot.
 
-**Pick up.** In Claude Code, in the folder where you want to work, type `/switcheroo:receive <code>`. It shows the sender's handoff note; then open the conversation with the `/resume <id>` it gives you. The conversation ends with the same note.
+**Pick up.** In Claude Code, in the folder where you want to work, type `/switcheroo:receive <code>`. It shows the sender's note; then open the conversation with the `/resume <id>` it gives you. The conversation ends with the sender's handoff message.
 
-**From a terminal.** `switcheroo pickup <code>` receives and opens Claude in one step; add `--no-resume` to only install the session. `switcheroo send --session <id> < note.txt` sends with a handoff note, and `switcheroo status` and `switcheroo cancel <code>` work as above. Both accept `--relay-url` and `--transit-relay` to use self-hosted magic-wormhole relays; the plugin always uses the public ones. On a self-hosted relay a used or mistyped code can take up to 30 seconds to fail, and so can a cancelled code on any relay.
+**From a terminal.** `switcheroo pickup <code>` receives and opens Claude in one step; add `--no-resume` to only install the session. `switcheroo send --session <id> < note.txt` sends with a note, and `switcheroo status` and `switcheroo cancel <code>` work as above. Both accept `--relay-url` and `--transit-relay` to use self-hosted magic-wormhole relays; the plugin always uses the public ones. On a self-hosted relay a used or mistyped code can take up to 30 seconds to fail, and so can a cancelled code on any relay.
 
 ## Security
 

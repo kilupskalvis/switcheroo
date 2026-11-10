@@ -57,7 +57,7 @@ func (s *Service) Pickup(ctx context.Context, code, cwd string, resume bool) err
 	}
 	_, _ = fmt.Fprintln(s.out, untrusted)
 	if m.Note != "" {
-		_, _ = fmt.Fprintf(s.out, "Handoff note from the sender:\n%s\n", m.Note)
+		_, _ = fmt.Fprintf(s.out, "Note from the sender:\n%s\n", m.Note)
 	}
 
 	if !resume {

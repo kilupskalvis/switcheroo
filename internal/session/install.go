@@ -121,7 +121,7 @@ func writeFile(dest string, r io.Reader, rewrite bool, rw rewriter) error {
 }
 
 // completeSend answers the switcheroo send call the snapshot was taken during, so the
-// conversation ends cleanly with the handoff note as its last message.
+// conversation ends cleanly right after the sender's handoff message.
 func completeSend(transcript string, m Manifest, id, cwd string) error {
 	call, err := pendingCall(transcript, "switcheroo send")
 	if err != nil || call.toolUseID == "" {
@@ -131,10 +131,7 @@ func completeSend(transcript string, m Manifest, id, cwd string) error {
 	if err != nil {
 		return err
 	}
-	text := "Handed off with switcheroo."
-	if m.Note != "" {
-		text += "\n\nHandoff note from the sender:\n" + m.Note
-	}
+	const text = "Handed off with switcheroo."
 	entry := encode(map[string]any{
 		"parentUuid":  call.entryUUID,
 		"isSidechain": false,
