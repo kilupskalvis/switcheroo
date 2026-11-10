@@ -79,7 +79,8 @@ func pendingCall(path, command string) (toolCall, error) {
 				Command string `json:"command"`
 			} `json:"input"`
 		}
-		if json.Unmarshal(line, &e) == nil {
+		// Only messages count: logged API requests (api-request-blob) repeat earlier ones, answered calls included.
+		if json.Unmarshal(line, &e) == nil && (e.Type == "user" || e.Type == "assistant") {
 			if json.Unmarshal(e.Message.Content, &blocks) != nil && e.Type == "user" {
 				afterText = false // a prompt typed as plain text starts a new turn
 			}

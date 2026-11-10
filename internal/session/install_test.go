@@ -164,9 +164,11 @@ func TestInstallCompletesPendingSend(t *testing.T) {
 func TestInstallLeavesAnsweredSend(t *testing.T) {
 	call := `{"type":"assistant","uuid":"a1","message":{"role":"assistant","content":[{"type":"tool_use","id":"t1","name":"Bash","input":{"command":"switcheroo send --session x"}}]}}`
 	result := `{"type":"user","uuid":"u1","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"t1","content":"Pickup code: 1-a-b"}]}}`
-	bundle := packFixture(t, []string{fixtureLines[0], call, result}, nil)
+	// Claude Code logs later API requests with copies of earlier messages, the answered call included.
+	blob := `{"type":"api-request-blob","hash":"h","message":{"role":"assistant","content":[{"type":"text","text":"Sending."},{"type":"tool_use","id":"t1","name":"Bash","input":{"command":"switcheroo send --session x"}}]}}`
+	bundle := packFixture(t, []string{fixtureLines[0], call, result, blob}, nil)
 
-	if _, _, got := installedLines(t, bundle); len(got) != 3 {
+	if _, _, got := installedLines(t, bundle); len(got) != 4 {
 		t.Errorf("got %d lines, want the transcript unchanged", len(got))
 	}
 }
