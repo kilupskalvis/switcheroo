@@ -117,7 +117,7 @@ It shows the sender's note and the session ID. Open the conversation with `/resu
 
 ## Security
 
-- The transcript is sent exactly as it is, including anything it contains. Only send it to people who may see it.
+- The transcript is sent as it is, including anything the work read or printed. Only the copies of your CLAUDE.md, memory and email that Claude Code adds to it are removed. Only send it to people who may see it.
 - The transfer is end-to-end encrypted with magic-wormhole (PAKE). The relays cannot read it, but they do see both IP addresses, when a transfer happens and roughly how big it is. Use your own relays if that matters.
 - A code works once. Its four words make a guess about a 1 in 4 billion chance, one wrong guess kills it, and unused codes expire after an hour or when you cancel them.
 - The receiver resumes in their own permission mode, never the sender's.

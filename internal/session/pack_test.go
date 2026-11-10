@@ -102,6 +102,57 @@ func TestPackRoundTrip(t *testing.T) {
 	}
 }
 
+func TestPackRemovesSenderSetup(t *testing.T) {
+	const (
+		claudeMD = "Use \"tabs\" & <never> spaces.\nKeep commits short."
+		memory   = "- [Kilupa](kilupa.md) — private client rebuild"
+		email    = "The user's email address is someone@example.com. Use it only to identify the user."
+	)
+	enc := func(s string) string {
+		var b bytes.Buffer
+		e := json.NewEncoder(&b)
+		e.SetEscapeHTML(false)
+		_ = e.Encode(s)
+		return strings.TrimSpace(b.String())
+	}
+	instructions := `{"type":"attachment","uuid":"u1","attachment":{"type":"instructions","files":[` +
+		`{"path":"/home/x/.claude/CLAUDE.md","type":"User","content":` + enc(claudeMD) + `},` +
+		`{"path":"/home/x/.claude/projects/-a-b/memory/MEMORY.md","type":"AutoMem","content":` + enc(memory) + `}]}}`
+	context := `{"type":"attachment","uuid":"u2","attachment":{"type":"session_context","context":{"userEmail":` + enc(email) + `}}}`
+	blob := `{"type":"api-request-blob","hash":"h","message":{"role":"user","content":[{"type":"text","text":` +
+		enc("<system-reminder>\nContents of /home/x/.claude/CLAUDE.md (user's private global instructions):\n\n"+claudeMD+"\n\n"+memory+"\n# userEmail\n"+email+"\n</system-reminder>") + `}]}}`
+	lines := []string{fixtureLines[0], instructions, context, blob, fixtureLines[1]}
+	root := t.TempDir()
+	writeFixture(t, root, lines, map[string]string{"subagents/agent-1.jsonl": instructions + "\n"})
+
+	var buf bytes.Buffer
+	if err := NewStore(root).Pack(fixtureID, "", &buf); err != nil {
+		t.Fatal(err)
+	}
+	_, files := untar(t, &buf)
+
+	for name, b := range files {
+		for _, private := range []string{enc(claudeMD), enc(memory), enc(email)} {
+			private = strings.Trim(private, `"`)
+			if bytes.Contains(b, []byte(private)) {
+				t.Errorf("%s still holds %q", name, private)
+			}
+		}
+	}
+	got := strings.Split(strings.TrimSuffix(string(files["session.jsonl"]), "\n"), "\n")
+	if len(got) != len(lines) {
+		t.Fatalf("got %d lines, want %d", len(got), len(lines))
+	}
+	for i, l := range got {
+		if !json.Valid([]byte(l)) {
+			t.Errorf("line %d is not valid JSON: %s", i, l)
+		}
+	}
+	if !strings.Contains(got[1], `"path":"/home/x/.claude/CLAUDE.md","type":"User","content":"(removed by switcheroo)"`) {
+		t.Errorf("instructions entry not blanked in place: %s", got[1])
+	}
+}
+
 func TestPackWithoutSidecar(t *testing.T) {
 	root := t.TempDir()
 	writeFixture(t, root, fixtureLines, nil)
