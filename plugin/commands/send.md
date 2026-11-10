@@ -1,5 +1,6 @@
 ---
 description: Hand this conversation to another person with a one-time pickup code
+argument-hint: "[note for the receiver]"
 allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/bin/switcheroo send:*), Read, Grep, Glob, Bash(ls:*), Bash(ps:*), Bash(git status:*), Bash(git log:*), Bash(git branch:*), Bash(git remote:*), Bash(git worktree list:*), Bash(git rev-parse:*)
 ---
 
@@ -30,6 +31,8 @@ The other person will continue this conversation in their own Claude Code on the
    <short note>
    EOF
    ```
+
+   If the user wrote a note after the command, use it word for word as the short note: `$ARGUMENTS`. If that is empty, write the note yourself.
 
    The command fails without the note, or when your handoff message does not come right before it.
 

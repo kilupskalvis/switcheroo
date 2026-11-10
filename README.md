@@ -32,7 +32,7 @@ A CLI installed from a terminal does not update itself. Run the install line aga
 
 ## Use
 
-**Send.** Type `/switcheroo:send` in the session. Claude first reviews what the conversation depends on outside the transcript: every repository and worktree it touched, files outside them, external systems, running processes and access. It asks you how to make each available to the next person, for example by pushing a branch. It then writes a handoff message as its reply: what the conversation contains, where the work lives, and what the next person needs to set up. Right after it, it sends the conversation with a one-line note and prints a pickup code. You can keep working or close the session; a background process holds the code for an hour.
+**Send.** Type `/switcheroo:send` in the session. Claude first reviews what the conversation depends on outside the transcript: every repository and worktree it touched, files outside them, external systems, running processes and access. It asks you how to make each available to the next person, for example by pushing a branch. It then writes a handoff message as its reply: what the conversation contains, where the work lives, and what the next person needs to set up. Right after it, it sends the conversation with a one-line note and prints a pickup code. To write that note yourself, add it after the command: `/switcheroo:send Over to you, the deploy is the last bit.` You can keep working or close the session; a background process holds the code for an hour.
 
 **Check or withdraw.** `/switcheroo:status` lists what you sent from this machine and whether it was picked up. `/switcheroo:cancel <code>` withdraws a code that is still waiting and deletes its snapshot.
 
