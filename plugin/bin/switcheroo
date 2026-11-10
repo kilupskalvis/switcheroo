@@ -3,7 +3,7 @@
 # Bump version with every CLI release.
 set -eu
 
-version=v0.1.4
+version=v0.1.5
 repo=kilupskalvis/switcheroo
 dir=${XDG_CACHE_HOME:-$HOME/.cache}/switcheroo/bin/$version
 bin=$dir/switcheroo
