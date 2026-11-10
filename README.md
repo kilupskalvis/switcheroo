@@ -8,6 +8,7 @@ They continue the same conversation in their own Claude Code, with all of your c
 
 [![Release](https://img.shields.io/github/v/release/kilupskalvis/switcheroo)](https://github.com/kilupskalvis/switcheroo/releases/latest)
 [![CI](https://github.com/kilupskalvis/switcheroo/actions/workflows/ci.yml/badge.svg)](https://github.com/kilupskalvis/switcheroo/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
 [Install](#install) · [Usage](#usage) · [How it works](#how-it-works) · [Security](#security)
 
@@ -139,3 +140,7 @@ go tool golangci-lint run ./...
 [lefthook](https://github.com/evilmartians/lefthook) runs both, plus `go mod tidy -diff`, before each commit.
 
 Pushing a `v*` tag builds and publishes the CLI binaries. The plugin is pinned to one CLI release, so with every release also bump `version=` in `plugin/bin/switcheroo` and `version` in `plugin/.claude-plugin/plugin.json`.
+
+## License
+
+[MIT](LICENSE)
